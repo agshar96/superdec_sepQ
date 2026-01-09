@@ -55,7 +55,11 @@ def main():
     points = torch.from_numpy(points).unsqueeze(0).to(device).float()
 
     with torch.no_grad():
+
+        start_time = time.time()
         outdict = model(points)
+        print(f"Total time passed: {time.time() - start_time} seconds")
+        print("Output keys:", outdict.keys())
         for key in outdict:
             if isinstance(outdict[key], torch.Tensor):
                 outdict[key] = outdict[key].cpu()
@@ -64,30 +68,30 @@ def main():
         outdict = denormalize_outdict(outdict, translation, scale, z_up)
         points = denormalize_points(points.cpu(), translation, scale, z_up)
 
-    pred_handler = PredictionHandler.from_outdict(outdict, points, ['chair'])
-    mesh = pred_handler.get_meshes(resolution=resolution)[0]
-    pcs = pred_handler.get_segmented_pcs()[0]
+    # pred_handler = PredictionHandler.from_outdict(outdict, points, ['chair'])
+    # mesh = pred_handler.get_meshes(resolution=resolution)[0]
+    # pcs = pred_handler.get_segmented_pcs()[0]
 
-    server = viser.ViserServer()
-    server.scene.add_mesh_trimesh("superquadrics", mesh=mesh, visible=True)
+    # server = viser.ViserServer()
+    # server.scene.add_mesh_trimesh("superquadrics", mesh=mesh, visible=True)
     
-    server.scene.add_point_cloud(
-        name="/segmented_pointcloud",
-        points=np.array(pcs.points),
-        colors=np.array(pcs.colors),
-        point_size=0.005,
-    )
-    if z_up:
-        server.scene.set_up_direction([0.0, 0.0, 1.0])
-    else:
-        server.scene.set_up_direction([0.0, 1.0, 0.0])
+    # server.scene.add_point_cloud(
+    #     name="/segmented_pointcloud",
+    #     points=np.array(pcs.points),
+    #     colors=np.array(pcs.colors),
+    #     point_size=0.005,
+    # )
+    # if z_up:
+    #     server.scene.set_up_direction([0.0, 0.0, 1.0])
+    # else:
+    #     server.scene.set_up_direction([0.0, 1.0, 0.0])
 
-    @server.on_client_connect
-    def _(client: viser.ClientHandle) -> None:
-        client.camera.position = (0.8, 0.8, 0.8)
-        client.camera.look_at = (0., 0., 0.)
-    while True:
-        time.sleep(10.0)
+    # @server.on_client_connect
+    # def _(client: viser.ClientHandle) -> None:
+    #     client.camera.position = (0.8, 0.8, 0.8)
+    #     client.camera.look_at = (0., 0., 0.)
+    # while True:
+    #     time.sleep(10.0)
 
 if __name__ == "__main__":
     main()

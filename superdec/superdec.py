@@ -42,6 +42,7 @@ class SuperDec(nn.Module):
         point_features = self.point_encoder(x)
 
         refined_queries_list, assign_matrices = self.layers(self.init_queries, point_features)
+
         outdict_list = []
 
         # TODO remove this in the final version. there is no need to compute the output for all of them   

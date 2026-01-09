@@ -1,10 +1,54 @@
-checkpoints_folder: #PATH TO CHECKPOINT FOLDER
-checkpoint_file: # NAME of CHECKPOINT FILE
+checkpoints_folder: checkpoints/superdec_base
+checkpoint_file: epoch_750.pt
+seed: 42
+use_wandb: false
 config_file: config.yaml # NAME of CONFIG FILE
 device: "cuda"
+superdec:
+  decoder:
+    n_queries: 16
+    n_layers: 3 # number of transformer decoders
+    n_heads: 1
+    masked_attention: false
+    swapped_attention: false
+    dim_feedforward: 512 # default
+    deep_supervision: False
+    pos_encoding_type: sinusoidal
+  point_encoder:
+    in_channels: 3
+    out_channels: 128
+    kernel_size: 3
+    resolution: 32
+    voxelization:
+      normalize: True
+      eps: 0
+    l1:
+      in_channels: 3
+      out_channels: 64
+      kernel_size: 3
+      resolution: 32
+      voxelization:
+        normalize: True
+        eps: 0
+    l2:
+      in_channels: 64
+      out_channels: 128
+      kernel_size: 3
+      resolution: 16
+      voxelization:
+        normalize: True
+        eps: 0
+    l3:
+      in_channels: 128
+      out_channels: 128
+      kernel_size: 3
+      resolution: 16
+      voxelization:
+        normalize: True
+        eps: 0
 dataloader:
   dataset: shapenet 
-  batch_size: 128
+  batch_size: 32
   num_workers: 4
 shapenet:
   split: test
@@ -19,3 +63,9 @@ scenes_dataset:
   fps: false
 evaluation:
   resolution: 100 
+loss:
+  n_samples: 500
+  w_sps: 0.1 #0.6 
+  w_ext: 0.01 #0.01 
+  w_cub: 1.0 #1.0 
+  w_cd: 1.0

@@ -3,7 +3,7 @@ use_wandb: false
 wandb:
   project: #insert PROJECT NAME
   entity: #insert USERNAME
-run_name: superdec_base
+run_name: superdec_sepWeights
 dataset: shapenet  
 device: cuda
 
@@ -65,7 +65,7 @@ trainer:
   num_epochs: 1000
   batch_size: 32
   num_workers: 4
-  evaluate_every_n_epochs: 1
+  evaluate_every_n_epochs: 25
   augmentations: True
 optimizer:
   lr: 4e-4 #1e-4 #1e-4   0.001

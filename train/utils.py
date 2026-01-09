@@ -61,6 +61,18 @@ def build_dataloaders(cfg, is_distributed=False):
     )
     return {'train': train_loader, 'val': val_loader}, train_sampler if is_distributed else None
 
+def build_test_dataloader(cfg, is_distributed=False):
+    if cfg.dataloader.dataset == 'shapenet':
+        test_ds = ShapeNet(split='test', cfg=cfg)
+    else:
+        raise ValueError(f"Unsupported dataset {cfg.dataloader.dataset}")
+
+    test_loader = DataLoader(
+        test_ds, batch_size=cfg.dataloader.batch_size, shuffle=False,
+        num_workers=cfg.dataloader.num_workers, pin_memory=True
+    )
+    
+    return {'test': test_loader}, None
 
 def build_loss(cfg):
     return Loss(cfg.loss)
