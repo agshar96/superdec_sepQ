@@ -55,11 +55,7 @@ def main():
     points = torch.from_numpy(points).unsqueeze(0).to(device).float()
 
     with torch.no_grad():
-
-        start_time = time.time()
         outdict = model(points)
-        print(f"Total time passed: {time.time() - start_time} seconds")
-        print("Output keys:", outdict.keys())
         for key in outdict:
             if isinstance(outdict[key], torch.Tensor):
                 outdict[key] = outdict[key].cpu()
@@ -67,6 +63,13 @@ def main():
         scale = np.array([scale])
         outdict = denormalize_outdict(outdict, translation, scale, z_up)
         points = denormalize_points(points.cpu(), translation, scale, z_up)
+        # outdict key and values
+        print("Output dictionary keys and their shapes/types:")
+        for key, value in outdict.items():
+            if isinstance(value, torch.Tensor):
+                print(f"  {key}: Tensor of shape {value.shape}")
+            else:
+                print(f"  {key}: {type(value)}")
 
     # pred_handler = PredictionHandler.from_outdict(outdict, points, ['chair'])
     # mesh = pred_handler.get_meshes(resolution=resolution)[0]

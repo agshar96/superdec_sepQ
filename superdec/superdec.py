@@ -45,14 +45,11 @@ class SuperDec(nn.Module):
 
         outdict_list = []
 
-        # TODO remove this in the final version. there is no need to compute the output for all of them   
-        thred = 24
-        for i, q in enumerate(refined_queries_list): 
-            outdict_list += [self.heads(q[:,:-1,...])]
-            assign_matrix = assign_matrices[i]
-            assign_matrix = torch.softmax(assign_matrix, dim=2)
-            outdict_list[i]['assign_matrix'] = assign_matrix 
-            # outdict_list[i]['exist'] = (assign_matrix.sum(1) > thred).to(torch.float32).detach()[...,None]
+        q = refined_queries_list[-1]
+        outdict_list.append(self.heads(q[:, :-1, ...]))
+        assign_matrix = assign_matrices[-1]
+        assign_matrix = torch.softmax(assign_matrix, dim=2)
+        outdict_list[-1]['assign_matrix'] = assign_matrix
 
         if self.lm_optimization:
             outdict_list[-1] = self.lm_optimizer(outdict_list[-1], x)
