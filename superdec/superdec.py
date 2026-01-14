@@ -34,7 +34,8 @@ class SuperDec(nn.Module):
             nn.ReLU(),
             nn.Linear(self.emb_dims, self.emb_dims),
         )
-        self.heads = SuperDecHead(emb_dims=self.emb_dims)
+
+        self.heads = SuperDecHead(emb_dims=self.emb_dims, use_separate_queries=ctx.use_separate_queries)
         init_queries = torch.zeros(self.n_queries + 1, self.emb_dims)
         self.register_buffer('init_queries', init_queries) # TODO double check -> new codebase
     

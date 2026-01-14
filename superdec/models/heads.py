@@ -5,29 +5,45 @@ import torch
 class SuperDecHead(nn.Module):
     """Head for Superquadrics Prediction"""
     
-    def __init__(self, emb_dims):
+    def __init__(self, emb_dims, use_separate_queries=False):
         super(SuperDecHead, self).__init__()
+        self.use_separate_queries = use_separate_queries
         self.emb_dims = emb_dims
-        self.scale_head = nn.Linear(emb_dims, 3)
-        self.shape_head = nn.Linear(emb_dims, 2)
-        self.rot_head = nn.Linear(emb_dims, 4)
-        self.t_head = nn.Linear(emb_dims, 3)
-        self.exist_head = nn.Linear(emb_dims, 1)
+        if use_separate_queries:
+            self.scale_shape_dims = emb_dims // 2
+            self.rot_t_exist_dims = emb_dims - self.scale_shape_dims
+        else:
+            # entire embedding used for all predictions
+            self.scale_shape_dims = emb_dims
+            self.rot_t_exist_dims = emb_dims
+
+        self.scale_head = nn.Linear(self.scale_shape_dims, 3)
+        self.shape_head = nn.Linear(self.scale_shape_dims, 2)
+        self.rot_head = nn.Linear(self.rot_t_exist_dims, 4)
+        self.t_head = nn.Linear(self.rot_t_exist_dims, 3)
+        self.exist_head = nn.Linear(self.rot_t_exist_dims, 1)
 
 
     def forward(self, x):
-        scale_pre_activation = self.scale_head(x)
+        if self.use_separate_queries:
+            x_scale_shape = x[..., :self.scale_shape_dims]
+            x_rot_t_exist = x[..., self.scale_shape_dims:]
+        else:
+            x_scale_shape = x
+            x_rot_t_exist = x
+
+        scale_pre_activation = self.scale_head(x_scale_shape)
         scale = self.scale_activation(scale_pre_activation)
         
-        shape_before_activation = self.shape_head(x)
+        shape_before_activation = self.shape_head(x_scale_shape)
         shape = self.shape_activation(shape_before_activation)
 
-        q = F.normalize(self.rot_head(x), dim=-1, p=2)
+        q = F.normalize(self.rot_head(x_rot_t_exist), dim=-1, p=2)
         rotation = self.quat2mat(q)
 
-        translation = self.t_head(x)
+        translation = self.t_head(x_rot_t_exist)
 
-        exist = self.exist_activation(self.exist_head(x))
+        exist = self.exist_activation(self.exist_head(x_rot_t_exist))
 
         return {"scale": scale, "shape": shape, "rotate": rotation, "trans": translation, "exist": exist}
         

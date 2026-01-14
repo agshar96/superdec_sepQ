@@ -24,6 +24,7 @@ class Trainer:
         self.start_epoch = start_epoch
         self.is_distributed = is_distributed
         self.train_sampler = train_sampler
+        self.log_window = ctx.log_every_n_steps
 
 
     def save_checkpoint(self, epoch, val_loss):
@@ -89,11 +90,13 @@ class Trainer:
         loader = self.dataloaders['train']
         if self.is_distributed and self.train_sampler is not None:
             self.train_sampler.set_epoch(epoch)
-        pbar = tqdm(loader, desc=f"Epoch {epoch+1}/{self.num_epochs}", leave=False)
+        pbar = tqdm(loader, desc=f"Epoch {epoch+1}/{self.num_epochs}", leave=False, miniters=self.log_window)
 
         total_loss = 0.0
         total_batches = 0
         avg_loss_dict = {}
+        window_loss_dict = {}
+        window_size = 0
 
         for batch in pbar:
             pc, normals = batch['points'].cuda().float(), batch['normals'].cuda().float()
@@ -113,8 +116,17 @@ class Trainer:
             total_batches += 1
             for k, v in loss_dict.items():
                 avg_loss_dict[k] = avg_loss_dict.get(k, 0.0) + v
+                window_loss_dict[k] = window_loss_dict.get(k, 0.0) + v
+            window_size += 1
 
-            pbar.set_postfix({k: f"{v:.4f}" for k, v in loss_dict.items()})
+            if window_size % self.log_window == 0:
+                # To prevent log overflow
+                pbar.set_postfix({k: f"{(v / window_size):.4f}" for k, v in window_loss_dict.items()})
+                window_loss_dict = {}
+                window_size = 0
+
+        if window_size > 0:
+            pbar.set_postfix({k: f"{(v / window_size):.4f}" for k, v in window_loss_dict.items()})
 
         # Compute averages
         avg_loss = total_loss / total_batches if total_batches > 0 else 0.0

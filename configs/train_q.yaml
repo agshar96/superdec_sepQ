@@ -1,11 +1,18 @@
-checkpoints_folder: checkpoints/normalized
-checkpoint_file: ckpt.pt
 seed: 42
 use_wandb: false
-config_file: config.yaml # NAME of CONFIG FILE
-device: "cuda"
+wandb:
+  project: #insert PROJECT NAME
+  entity: #insert USERNAME
+run_name: superdec_sepQueries_1
+dataset: shapenet  
+device: cuda
+
+checkpoints:
+  resume_from: #
+  keep_epoch: False
+
 superdec:
-  use_separate_queries: false
+  use_separate_queries: true
   decoder:
     n_queries: 16
     n_layers: 3 # number of transformer decoders
@@ -46,27 +53,41 @@ superdec:
       resolution: 16
       voxelization:
         normalize: True
-        eps: 0
-dataloader:
-  dataset: shapenet 
-  batch_size: 32
-  num_workers: 4
+        eps: 0  
+
 shapenet:
-  split: test
-  path: "data/ShapeNet"
-  normalize: false
-  categories: null
-scenes_dataset:
-  split: val
-  path: "data/scannetpp"
-  normalize: true
-  gt: true
-  fps: false
-evaluation:
-  resolution: 100 
+  path: data/ShapeNet
+  categories: null #['03001627'] 
+  normalize: False
+
+trainer:
+  save_path: checkpoints
+  save_every_n_epochs: 50
+  num_epochs: 1000
+  batch_size: 32
+  log_every_n_steps: 100
+  num_workers: 4
+  evaluate_every_n_epochs: 100
+  augmentations: True
+optimizer:
+  lr: 4e-4 #1e-4 #1e-4   0.001
+  weight_decay: 0 # default
+  betas: [0.9, 0.999] # default
+  enable_scheduler: True # True
+  only_heads: False
+
+scheduler:  
+  _target_: torch.optim.lr_scheduler.OneCycleLR 
+  max_lr: ${optimizer.lr} 
+  epochs: ${trainer.num_epochs}
+  steps_per_epoch: -1
+
 loss:
   n_samples: 500
   w_sps: 0.1 #0.6 
   w_ext: 0.01 #0.01 
   w_cub: 1.0 #1.0 
   w_cd: 1.0
+  
+visualization:
+  res_primitives: 40

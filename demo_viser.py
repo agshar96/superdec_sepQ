@@ -11,8 +11,8 @@ from superdec.data.dataloader import normalize_points, denormalize_outdict
 from superdec.data.transform import rotate_around_axis
 import time
 def main():
-    checkpoints_folder = "checkpoints/normalized"  # specify your checkpoints folder
-    checkpoint_file = "ckpt.pt"  # specify your checkpoint file 
+    checkpoints_folder = "checkpoints/superdec_sepQueries_1"  # specify your checkpoints folder
+    checkpoint_file = "epoch_750.pt"  # specify your checkpoint file
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     path_to_point_cloud = "examples/chair.ply"  # specify your input point cloud path
     z_up = False  # specify if your input point cloud is in z-up orientation
@@ -63,17 +63,10 @@ def main():
         scale = np.array([scale])
         outdict = denormalize_outdict(outdict, translation, scale, z_up)
         points = denormalize_points(points.cpu(), translation, scale, z_up)
-        # outdict key and values
-        print("Output dictionary keys and their shapes/types:")
-        for key, value in outdict.items():
-            if isinstance(value, torch.Tensor):
-                print(f"  {key}: Tensor of shape {value.shape}")
-            else:
-                print(f"  {key}: {type(value)}")
 
-    # pred_handler = PredictionHandler.from_outdict(outdict, points, ['chair'])
-    # mesh = pred_handler.get_meshes(resolution=resolution)[0]
-    # pcs = pred_handler.get_segmented_pcs()[0]
+    pred_handler = PredictionHandler.from_outdict(outdict, points, ['chair'])
+    mesh = pred_handler.get_meshes(resolution=resolution)[0]
+    pcs = pred_handler.get_segmented_pcs()[0]
 
     # server = viser.ViserServer()
     # server.scene.add_mesh_trimesh("superquadrics", mesh=mesh, visible=True)

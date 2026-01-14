@@ -18,7 +18,7 @@ def to_str_dict(d):
     else:
         return d
 
-@hydra.main(config_path="../configs", config_name="train", version_base=None)
+@hydra.main(config_path="../configs", config_name="train_q", version_base=None)
 def main(cfg: DictConfig):
     is_distributed = int(os.environ.get('WORLD_SIZE', 1)) > 1
     if is_distributed:

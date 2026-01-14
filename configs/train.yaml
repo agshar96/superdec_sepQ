@@ -12,6 +12,7 @@ checkpoints:
   keep_epoch: False
 
 superdec:
+  use_separate_queries: false
   decoder:
     n_queries: 16
     n_layers: 3 # number of transformer decoders
@@ -62,6 +63,7 @@ shapenet:
 trainer:
   save_path: checkpoints
   save_every_n_epochs: 50
+  log_every_n_steps: 100
   num_epochs: 1000
   batch_size: 32
   num_workers: 4
