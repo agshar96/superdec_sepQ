@@ -17,3 +17,5 @@ data*
 tmp*
 *.pt
 checkpoints*
+saved_meshes*
+.vscode*
