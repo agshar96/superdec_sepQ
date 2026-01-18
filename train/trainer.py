@@ -43,10 +43,10 @@ class Trainer:
         ckpt_filename = f'epoch_{epoch+1}.pt'
         ckpt_path = os.path.join(self.save_path, ckpt_filename)
         torch.save(checkpoint, ckpt_path)
-        if self.wandb_run is not None and wandb is not None:
-            artifact = wandb.Artifact(ckpt_filename, type='model')
-            artifact.add_file(ckpt_path)
-            self.wandb_run.log_artifact(artifact)
+        # if self.wandb_run is not None and wandb is not None:
+        #     artifact = wandb.Artifact(ckpt_filename, type='model')
+        #     artifact.add_file(ckpt_path)
+        #     self.wandb_run.log_artifact(artifact)
 
     @torch.no_grad()
     def evaluate(self, epoch):
@@ -55,7 +55,8 @@ class Trainer:
             return {}  # skip on non-zero ranks #TODO check whether this is ever called (I think it is not)
         self.model.eval()
         loader = self.dataloaders['val']
-        pbar = tqdm(loader, desc=f"Eval  {epoch+1}/{self.num_epochs}", leave=False)
+        use_tqdm = self.wandb_run is None
+        pbar = tqdm(loader, desc=f"Eval  {epoch+1}/{self.num_epochs}", leave=False) if use_tqdm else loader
 
         total_loss = 0.0
         total_batches = 0
@@ -77,11 +78,13 @@ class Trainer:
             for k, v in loss_dict.items():
                 avg_loss_dict[k] = avg_loss_dict.get(k, 0.0) + v
 
-            pbar.set_postfix({k: f"{v / total_batches:.4f}" for k, v in avg_loss_dict.items()})
+            if use_tqdm:
+                pbar.set_postfix({k: f"{v / total_batches:.4f}" for k, v in avg_loss_dict.items()})
 
         # Compute averages
         for k in avg_loss_dict:
             avg_loss_dict[k] /= total_batches
+        print(f"Validation Loss at epoch {epoch+1}: {total_loss / total_batches:.4f}")
         return avg_loss_dict
 
     def train_one_epoch(self, epoch):
@@ -90,7 +93,8 @@ class Trainer:
         loader = self.dataloaders['train']
         if self.is_distributed and self.train_sampler is not None:
             self.train_sampler.set_epoch(epoch)
-        pbar = tqdm(loader, desc=f"Epoch {epoch+1}/{self.num_epochs}", leave=False, miniters=self.log_window)
+        use_tqdm = self.wandb_run is None
+        pbar = tqdm(loader, desc=f"Epoch {epoch+1}/{self.num_epochs}", leave=False, miniters=self.log_window) if use_tqdm else loader
 
         total_loss = 0.0
         total_batches = 0
@@ -121,17 +125,22 @@ class Trainer:
 
             if window_size % self.log_window == 0:
                 # To prevent log overflow
-                pbar.set_postfix({k: f"{(v / window_size):.4f}" for k, v in window_loss_dict.items()})
+                if use_tqdm:
+                    pbar.set_postfix({k: f"{(v / window_size):.4f}" for k, v in window_loss_dict.items()})
                 window_loss_dict = {}
                 window_size = 0
 
         if window_size > 0:
-            pbar.set_postfix({k: f"{(v / window_size):.4f}" for k, v in window_loss_dict.items()})
+            if use_tqdm:
+                pbar.set_postfix({k: f"{(v / window_size):.4f}" for k, v in window_loss_dict.items()})
 
         # Compute averages
         avg_loss = total_loss / total_batches if total_batches > 0 else 0.0
         for k in avg_loss_dict:
             avg_loss_dict[k] /= total_batches
+
+        if is_main_process():
+            print(f"Training Loss at epoch {epoch+1}: {avg_loss:.4f}")
 
         # Log training metrics to wandb
         if self.wandb_run is not None and is_main_process():
@@ -156,8 +165,9 @@ class Trainer:
             
             # Evaluation phase (every epoch in the main process)
             if is_main_process():
-                val_metrics = self.evaluate(epoch)
-                val_loss = val_metrics.get('loss', None) or list(val_metrics.values())[0]
+                if epoch % self.ctx.evaluate_every_n_epochs == 0 or epoch == self.num_epochs - 1:
+                    val_metrics = self.evaluate(epoch)
+                    val_loss = val_metrics.get('loss', None) or list(val_metrics.values())[0]
 
                 do_save = ((epoch + 1) % save_every == 0) or (epoch == self.num_epochs - 1)
                 if do_save: 

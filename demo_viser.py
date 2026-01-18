@@ -11,10 +11,10 @@ from superdec.data.dataloader import normalize_points, denormalize_outdict
 from superdec.data.transform import rotate_around_axis
 import time
 def main():
-    checkpoints_folder = "checkpoints/superdec_sepQueries_1"  # specify your checkpoints folder
-    checkpoint_file = "epoch_750.pt"  # specify your checkpoint file
+    checkpoints_folder = "checkpoints/<folder>"  # specify your checkpoints folder
+    checkpoint_file = "ckpt.pt"  # specify your checkpoint file
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    path_to_point_cloud = "examples/chair.ply"  # specify your input point cloud path
+    path_to_point_cloud = "chair.ply"  # specify your input point cloud path
     z_up = False  # specify if your input point cloud is in z-up orientation
     normalize = True  # specify if you want to normalize the input point cloud
     lm_optimization = False  # specify if you want to use the LM optimization
@@ -64,8 +64,13 @@ def main():
         outdict = denormalize_outdict(outdict, translation, scale, z_up)
         points = denormalize_points(points.cpu(), translation, scale, z_up)
 
-    pred_handler = PredictionHandler.from_outdict(outdict, points, ['chair'])
+    # for key in outdict:
+    #     print(f"{key}: {outdict[key].shape}")
+    #     if key == 'exist':
+    #         print(f"Existence probabilities: {outdict[key]}")
+    pred_handler = PredictionHandler.from_outdict(outdict, points, ['laptop'])
     mesh = pred_handler.get_meshes(resolution=resolution)[0]
+    mesh.export("saved_meshes/name.obj")
     pcs = pred_handler.get_segmented_pcs()[0]
 
     # server = viser.ViserServer()

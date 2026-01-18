@@ -51,6 +51,19 @@ def get_transforms(split: str, cfg):
     if split != 'train' or 'trainer' not in cfg or not cfg.trainer.augmentations:
         return None
 
+    if getattr(cfg.trainer, "z_up", False):
+        return Compose([
+            Scale3d(),
+            RotateAroundAxis3d(rotation_limit=np.pi / 24, axis=(0, 0, 1)),
+            RotateAroundAxis3d(rotation_limit=np.pi / 24, axis=(0, 1, 0)),
+            RotateAroundAxis3d(rotation_limit=np.pi, axis=(0, 0, 1)), # z axis full rotation
+            RandomMove3d(
+                x_min=-0.1, x_max=0.1,
+                y_min=-0.1, y_max=0.1,
+                z_min=-0.05, z_max=0.05
+            ),
+        ])
+
     return Compose([
         Scale3d(),
         RotateAroundAxis3d(rotation_limit=np.pi / 24, axis=(0, 0, 1)),
@@ -194,6 +207,8 @@ class ShapeNet(Dataset):
 
         self.transform = get_transforms(split, cfg)
         self.normalize = cfg.shapenet.normalize
+        self.use_subset = getattr(cfg.trainer, "use_subset", False)
+        self.subset_size = getattr(cfg.trainer, "subset_size", None)
 
         self.categories = self._load_categories(cfg.shapenet.categories)
         self.models = self._gather_models()
@@ -214,6 +229,8 @@ class ShapeNet(Dataset):
                 continue
             with open(split_file, 'r') as f:
                 model_ids = [line.strip() for line in f if line.strip()]
+            if self.use_subset and self.subset_size is not None:
+                model_ids = model_ids[:self.subset_size]
             models.extend([{'category': c, 'model_id': m} for m in model_ids])
         return models
 
@@ -266,3 +283,78 @@ class ShapeNet(Dataset):
 
     def name(self):
         return 'ShapeNet'
+
+
+class Laptop(Dataset):
+    def __init__(self, split: str, cfg):
+        super().__init__()
+        self.split = split
+        self.data_root = cfg.laptop.path
+
+        self.transform = get_transforms(split, cfg)
+        self.normalize = cfg.laptop.normalize
+
+        self.models = self._gather_models()
+
+    def _gather_models(self):
+        npz_files = glob(os.path.join(self.data_root, "*.npz"))
+        model_ids = []
+        for npz_file in npz_files:
+            basename = os.path.basename(npz_file)
+            stem, _ = os.path.splitext(basename)
+            if stem.isdigit():
+                model_ids.append(int(stem))
+        model_ids.sort()
+
+        if self.split == "train":
+            selected_ids = [m for m in model_ids if m % 2 == 0]
+        elif self.split in {"val", "test"}:
+            selected_ids = [m for m in model_ids if m % 2 == 1]
+        else:
+            raise ValueError(f"Unsupported split {self.split}")
+
+        return selected_ids
+
+    def __len__(self):
+        return len(self.models)
+
+    def __getitem__(self, idx):
+        model_id = self.models[idx]
+        model_path = os.path.join(self.data_root, f"{model_id}.npz")
+
+        pc_data = np.load(model_path)
+        points_tmp = pc_data["points"]
+        normals_tmp = pc_data["normals"]
+
+        n_points = points_tmp.shape[0]
+        if n_points >= 4096:
+            idxs = np.random.choice(n_points, 4096, replace=False)
+            points = points_tmp[idxs]
+            normals = normals_tmp[idxs]
+        else:
+            idxs = np.random.choice(n_points, 4096)
+            points = points_tmp[idxs]
+            normals = normals_tmp[idxs]
+
+        if self.normalize:
+            points, translation, scale = normalize_points(points)
+        else:
+            translation = np.zeros(3)
+            scale = 1.0
+
+        if self.transform is not None:
+            t_data = self.transform(points=points, normals=normals)
+            points = t_data["points"]
+            normals = t_data["normals"]
+
+        return {
+            "points": torch.from_numpy(points),
+            "normals": torch.from_numpy(normals),
+            "translation": torch.from_numpy(translation),
+            "scale": scale,
+            "point_num": points.shape[0],
+            "model_id": str(model_id),
+        }
+
+    def name(self):
+        return "Laptop"

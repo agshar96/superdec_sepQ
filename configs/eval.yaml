@@ -1,11 +1,11 @@
-checkpoints_folder: checkpoints/normalized
-checkpoint_file: ckpt.pt
+checkpoints_folder: checkpoints/superdec_laptop_1
+checkpoint_file: epoch_500.pt
 seed: 42
 use_wandb: false
 config_file: config.yaml # NAME of CONFIG FILE
 device: "cuda"
 superdec:
-  use_separate_queries: false
+  use_separate_queries: true
   decoder:
     n_queries: 16
     n_layers: 3 # number of transformer decoders
@@ -48,7 +48,7 @@ superdec:
         normalize: True
         eps: 0
 dataloader:
-  dataset: shapenet 
+  dataset: laptop
   batch_size: 32
   num_workers: 4
 shapenet:
@@ -56,6 +56,10 @@ shapenet:
   path: "data/ShapeNet"
   normalize: false
   categories: null
+laptop:
+  split: test
+  path: laptop_npz
+  normalize: False
 scenes_dataset:
   split: val
   path: "data/scannetpp"

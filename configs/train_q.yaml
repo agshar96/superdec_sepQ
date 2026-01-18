@@ -1,9 +1,9 @@
 seed: 42
-use_wandb: false
+use_wandb: true
 wandb:
-  project: #insert PROJECT NAME
-  entity: #insert USERNAME
-run_name: superdec_sepQueries_1
+  project: superdec_sepQ
+  entity: =
+run_name: sepQueries_chairs_subset
 dataset: shapenet  
 device: cuda
 
@@ -57,18 +57,20 @@ superdec:
 
 shapenet:
   path: data/ShapeNet
-  categories: null #['03001627'] 
+  categories: ['03001627']
   normalize: False
 
 trainer:
   save_path: checkpoints
-  save_every_n_epochs: 50
-  num_epochs: 1000
-  batch_size: 32
+  save_every_n_epochs: 100
+  num_epochs: 20000
+  batch_size: 12 #32
   log_every_n_steps: 100
   num_workers: 4
-  evaluate_every_n_epochs: 100
+  evaluate_every_n_epochs: 10
   augmentations: True
+  use_subset: True
+  subset_size: 10 # basically we sort and select first n data samples
 optimizer:
   lr: 4e-4 #1e-4 #1e-4   0.001
   weight_decay: 0 # default

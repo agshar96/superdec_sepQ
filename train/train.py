@@ -74,6 +74,7 @@ def main(cfg: DictConfig):
             artifact = wandb.Artifact(name="config", type="config")
             artifact.add_file(os.path.join(cfg.trainer.save_path, "config.yaml"))
             run.log_artifact(artifact)
+            print("Logged config to wandb")
 
     trainer = Trainer(model, optimizer, scheduler, dataloaders, loss_fn, cfg.trainer, run, start_epoch=start_epoch, best_val_loss=best_val_loss, is_distributed=is_distributed, train_sampler=train_sampler)
     trainer.train()
